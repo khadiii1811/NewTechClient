@@ -1,34 +1,45 @@
-import React, { useState } from "react";
-
-const initialCustomers = [
-  { id: 1, name: "Nguyen Van A", email: "a@gmail.com", phone: "0901234567" },
-  { id: 2, name: "Tran Thi B", email: "b@gmail.com", phone: "0912345678" },
-  { id: 3, name: "Le Van C", email: "c@gmail.com", phone: "0923456789" },
-  { id: 4, name: "Pham Thi D", email: "d@gmail.com", phone: "0934567890" },
-];
+import React, { useState, useEffect } from "react";
+import customerApi from"../service/customerService";
 
 export default function CustomerManagement() {
-  const [customers, setCustomers] = useState(initialCustomers);
+  const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState({ id: null, name: "", email: "", phone: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      const data = await customerApi.getCustomers();
+      setCustomers(data);
+    } catch (error) {
+      setCustomers([]);
+    }
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone) return;
-    if (isEditing) {
-      setCustomers(customers.map(c => c.id === form.id ? { ...form } : c));
+    try {
+      if (isEditing) {
+        await customerApi.updateCustomer(form.id, form);
+      } else {
+        await customerApi.addCustomer(form);
+      }
+      setForm({ id: null, name: "", email: "", phone: "" });
       setIsEditing(false);
-    } else {
-      const newId = customers.length ? Math.max(...customers.map(c => c.id)) + 1 : 1;
-      setCustomers([...customers, { ...form, id: newId }]);
+      setShowModal(false);
+      fetchCustomers();
+    } catch (error) {
+  
     }
-    setForm({ id: null, name: "", email: "", phone: "" });
-    setShowModal(false);
   };
 
   const handleEdit = (customer) => {
@@ -37,11 +48,16 @@ export default function CustomerManagement() {
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
-    setCustomers(customers.filter(c => c.id !== id));
-    if (isEditing && form.id === id) {
-      setIsEditing(false);
-      setForm({ id: null, name: "", email: "", phone: "" });
+  const handleDelete = async (id) => {
+    try {
+      await customerApi.deleteCustomer(id);
+      if (isEditing && form.id === id) {
+        setIsEditing(false);
+        setForm({ id: null, name: "", email: "", phone: "" });
+      }
+      fetchCustomers();
+    } catch (error) {
+      // handle error
     }
   };
 
